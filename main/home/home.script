@@ -1,0 +1,215 @@
+local gamedata = require "main/gamedata"
+local sounds = require "main/sounds"
+
+local input_action = hash("input_action")
+
+local msg_gameover = hash("gameover")
+local msg_fatdisco = hash("fatdisco")
+local msg_bound = hash("bound")
+local msg_updatescore = hash("updatescore")
+
+local fadlogo_resetpos = nil
+local fatdisco_resetpos = nil
+
+local MAX_FATDISCO = 5
+
+local MESSAGE_GO = 0
+local MESSAGE_HOLYDANCER = 1
+local MESSAGE_GAMEOVER = 2
+
+local gameover_timer = 0
+local fatdisco_timer = 0
+local player_score = 0
+
+local function update_score(self, score)
+	player_score = player_score + score
+	local sc = player_score
+	for i=1, 8 do
+		local s = sc / 10
+		local r = sc % 10
+		sc = math.floor(s)
+		local url = msg.url("score#pos"..tostring(i))
+		local type = "score"..tostring(r)
+		sprite.play_flipbook(url, type, nil)
+	end
+end
+
+local function enable_hud(self, enable)
+	local m = nil
+	if not enable then
+		m = "disable"
+	else
+		m = "enable"
+	end
+	for i=1,5 do
+		local n = "disco"..tostring(i).."#sprite"
+		msg.post(n, m)
+	end
+	msg.post("robinface#sprite", m)
+	go.set("robinface#sprite", "tint.w", 0.5)
+end
+
+local function update_hud(self)
+	for i=1,5 do
+		local n = "disco"..tostring(i).."#sprite"
+		local alpha = 0.2
+		if self.fatdisco_count>=i then
+			alpha = 1.0
+		end
+		go.set(n, "tint.w", alpha)
+	end
+end
+
+local function message_done(self, url, property)
+	msg.post("message#sprite", "disable")
+	go.set("message#sprite", "tint.w", 1.0)
+end
+
+local function show_message(self, message, duration)
+	local type = "go"
+	local url = msg.url("message#sprite")
+	if message==MESSAGE_GO then
+		type = "go"
+	elseif message==MESSAGE_HOLYDANCER then
+		type = "holydancer"
+	elseif message==MESSAGE_GAMEOVER then
+		type = "gameover"
+	end
+	sprite.play_flipbook(url, type, nil)
+	msg.post("message#sprite", "enable")
+	go.animate("message", "scale.x", go.PLAYBACK_ONCE_PINGPONG, 1.25, go.EASING_LINEAR, duration, 0, message_done)
+	go.animate("message", "scale.y", go.PLAYBACK_ONCE_PINGPONG, 1.25, go.EASING_LINEAR, duration)
+	go.animate("message#sprite", "tint.w", go.PLAYBACK_ONCE_FORWARD, 0, go.EASING_LINEAR, duration)
+end
+
+local function fadlogo_fadedone(self, url, property)
+	go.set_position(fadlogo_resetpos)
+	--animazione sulla scritta ready (show, scale e alpha)!
+	show_message(self, MESSAGE_GO, 1)
+end
+
+local function set_home(self)
+	go.set("fadlogo", "position.x", 160)
+	go.set("fadlogo", "position.y", 100)
+	go.set("fadlogo", "scale.x", 1)
+	go.set("fadlogo", "scale.y", 1)
+	go.animate("fadlogo", "scale.x", go.PLAYBACK_LOOP_PINGPONG, 1.05, go.EASING_LINEAR, 2)
+	go.animate("fadlogo", "scale.y", go.PLAYBACK_LOOP_PINGPONG, 1.05, go.EASING_LINEAR, 2)
+
+	go.animate("pressplay#sprite", "tint.w", go.PLAYBACK_LOOP_PINGPONG, 0, go.EASING_INOUTSINE, 2)
+	msg.post("pressplay#sprite", "enable")
+	msg.post("acapitanidev#sprite", "enable")
+	msg.post("score", "disable")
+	
+	msg.post("batman", "resetpos")
+	msg.post("robin", "resetpos")
+	msg.post("joker", "resetpos")
+	msg.post("enigma", "resetpos")
+
+	gamedata.home()
+	msg.post("music#sound", "stop_sound")
+	enable_hud(self, false)
+	player_score = 0
+end
+
+local function set_ingame(self)
+	player_score = 0
+	fatdisco_timer = 0
+	self.fatdisco_count = 0
+	go.cancel_animations("fadlogo", "scale")
+	go.animate("fadlogo", "scale.x", go.PLAYBACK_ONCE_FORWARD, 0.0, go.EASING_LINEAR, 0.5, 0, fadlogo_fadedone)
+	go.animate("fadlogo", "scale.y", go.PLAYBACK_ONCE_FORWARD, 0.0, go.EASING_LINEAR, 0.5)
+	msg.post("pressplay#sprite", "disable")
+	msg.post("acapitanidev#sprite", "disable")
+	msg.post("score", "enable")
+	--msg.post("fatdisco#fatdisco", "show")
+	--go.set_position(fatdisco_resetpos, go.get_id("fatdisco"))
+	gamedata.ingame()
+	if not disable_music then
+		msg.post("music#sound", "play_sound", {delay = 0, gain = 0.2})
+	end
+	enable_hud(self, true)
+	update_hud(self)
+	update_score(self, 0)
+end
+
+local function set_gameover(self)
+	gamedata.gameover()
+	go.set_position(fatdisco_resetpos, go.get_id("fatdisco"))
+	--animazione sulla scritta gameover (show, scale e alpha), sul done dell'animazione va allo stato home
+	show_message(self, MESSAGE_GAMEOVER, 5)
+	gameover_timer = 0
+end
+
+function init(self)
+	msg.post(".", "acquire_input_focus")
+	sounds.init()
+	go.set("jamlogo#sprite", "tint.w", 0.3)
+	fadlogo_resetpos = vmath.vector3(go.get_position(go.get_id("fadlogo")))
+	fatdisco_resetpos = vmath.vector3(go.get_position(go.get_id("fatdisco")))
+	self.fatdisco_count = 0
+	set_home(self)
+end
+
+function final(self)
+	-- Add finalization code here
+	-- Remove this function if not needed
+end
+
+function update(self, dt)
+	if gamedata.game_state==gamedata.state_ingame then
+		--verifica la posizione di robin che non sia sotto una certa y per andare in gameover
+		fatdisco_timer = fatdisco_timer + dt
+	elseif gamedata.game_state==gamedata.state_gameover then
+		gameover_timer = gameover_timer+dt 
+		if gameover_timer>=5 then
+			set_home(self)
+		end
+	end
+end
+
+function on_message(self, message_id, message, sender)
+	if gamedata.game_state==gamedata.state_ingame then
+		if message_id==msg_fatdisco	and fatdisco_timer > 0.5 then
+			--fatman ha preso un fatdisco
+			fatdisco_timer = 0
+			self.fatdisco_count = self.fatdisco_count+1
+			if self.fatdisco_count>=MAX_FATDISCO then
+				self.fatdisco_count = 0
+				--mette robin in stato fatdisco
+				go.set_position(fatdisco_resetpos, go.get_id("fatdisco"))
+				msg.post("robin#robin", "dancer")
+				show_message(self, MESSAGE_HOLYDANCER, 3)
+				update_score(self, 500)
+			else
+				update_score(self, 100)
+				msg.post("fatdisco#fatdisco", "show")
+			end
+			update_hud(self)
+		elseif message_id==msg_gameover then
+			--robin schiattato
+			set_gameover(self)
+		elseif message_id==msg_bound then
+			msg.post("fatdisco#fatdisco", "show")
+		elseif message_id==msg_updatescore then
+			update_score(self, message.score)
+		end
+	end
+end
+
+function on_input(self, action_id, action)
+	if MOBILE then
+		if action_id==hash("touch") and gamedata.game_state==gamedata.state_home then
+			set_ingame(self)
+		end	
+	else
+		if action_id==input_action and gamedata.game_state==gamedata.state_home then
+			set_ingame(self)
+		end
+	end
+end
+
+function on_reload(self)
+	-- Add reload-handling code here
+	-- Remove this function if not needed
+end

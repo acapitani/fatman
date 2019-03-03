@@ -1,0 +1,60 @@
+local actor = require "main/actors/actor"
+local gamedata = require "main/gamedata"
+
+local msg_bomb_released = hash("bomb_released")
+local msg_contact_point_response = hash("contact_point_response")
+
+local group_batmanfoot = hash("batmanfoot")
+
+local resetpos = nil
+bomb_activated = false
+
+local function explode(self)
+	msg.post("bomb_baloon#bomb_baloon", "show_baloon", {position=go.get_position()})
+	msg.post("batman#batman", "bomb_explode", {position=go.get_position()})
+	go.set_position(resetpos)
+	bomb_activated = false
+end
+
+function init(self)
+	resetpos = vmath.vector3(go.get_position())
+	actor.init(self, "bomb")
+	bomb_activated = false
+end
+
+function final(self)
+	-- Add finalization code here
+	-- Remove this function if not needed
+end
+
+function update(self, dt)
+	if not gamedata.in_game then
+		return
+	end
+	local pos = go.get_position()
+	pos.z = actor.calc_z_offset(self, pos, 20)
+	go.set_position(pos)
+
+	if bomb_activated then
+		if actor.timer_elapsed(self, 5) then
+			explode(self)		
+		end
+	end
+	
+	actor.update(self, dt)
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id==msg_bomb_released then
+		go.set_position(message.position)
+		actor.timer_reset(self)
+		bomb_activated = true
+	elseif message_id==msg_contact_point_response and message.group==group_batmanfoot then
+		explode(self)
+	end
+end
+
+function on_reload(self)
+	-- Add reload-handling code here
+	-- Remove this function if not needed
+end

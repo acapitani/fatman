@@ -1,0 +1,57 @@
+local actor = require "main/actors/actor"
+local gamedata = require "main/gamedata"
+
+local msg_gas_released = hash("gas_released")
+
+local resetpos = nil
+gaspos = nil
+gas_activated = false
+
+local function animation_done(self, url, property)
+	go.set_position(resetpos)
+	gas_activated = false
+	actor.play_animation(self, "idle")
+end
+
+function init(self)
+	resetpos = vmath.vector3(go.get_position())
+	actor.init(self, "gas")
+	gas_activated = false
+end
+
+function final(self)
+	-- Add finalization code here
+	-- Remove this function if not needed
+end
+
+function update(self, dt)
+	if not gamedata.in_game then
+		return
+	end
+	local pos = go.get_position()
+	pos.z = actor.calc_z(self, pos)
+	go.set_position(pos)
+	gaspos = pos
+	actor.update(self, dt)
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id==msg_gas_released then
+		local pos = vmath.vector3(message.position)
+		go.set_position(pos)
+		gas_activated = true
+		local targetx = 0
+		if heropos.x<pos.x then
+			targetx = pos.x-100
+		else
+			targetx = pos.x+100
+		end
+		actor.play_animation(self, "move")
+		go.animate(".", "position.x", go.PLAYBACK_ONCE_FORWARD, targetx, go.EASING_LINEAR, 2, 0, animation_done)
+	end
+end
+
+function on_reload(self)
+	-- Add reload-handling code here
+	-- Remove this function if not needed
+end

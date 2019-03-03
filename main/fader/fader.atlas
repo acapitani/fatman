@@ -1,0 +1,12 @@
+images {
+  image: "/main/fader/tv.png"
+}
+images {
+  image: "/main/fader/fatman-logo.png"
+}
+images {
+  image: "/main/fader/tvgamejam.png"
+}
+margin: 0
+extrude_borders: 0
+inner_padding: 0

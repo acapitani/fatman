@@ -1,0 +1,66 @@
+images {
+  image: "/main/home/images/background.png"
+}
+images {
+  image: "/main/home/images/fatman-logo.png"
+}
+images {
+  image: "/main/home/images/tv.png"
+}
+images {
+  image: "/main/home/images/tvgamejam.png"
+}
+images {
+  image: "/main/home/images/gameover.png"
+}
+images {
+  image: "/main/home/images/go.png"
+}
+images {
+  image: "/main/home/images/holydancer.png"
+}
+images {
+  image: "/main/home/images/spacetoplay.png"
+}
+images {
+  image: "/main/objects/images/fat-disco16x16.png"
+}
+images {
+  image: "/main/objects/robin-face.png"
+}
+images {
+  image: "/main/home/images/acapitanidev.png"
+}
+images {
+  image: "/main/home/images/score0.png"
+}
+images {
+  image: "/main/home/images/score1.png"
+}
+images {
+  image: "/main/home/images/score2.png"
+}
+images {
+  image: "/main/home/images/score3.png"
+}
+images {
+  image: "/main/home/images/score4.png"
+}
+images {
+  image: "/main/home/images/score5.png"
+}
+images {
+  image: "/main/home/images/score6.png"
+}
+images {
+  image: "/main/home/images/score7.png"
+}
+images {
+  image: "/main/home/images/score8.png"
+}
+images {
+  image: "/main/home/images/score9.png"
+}
+margin: 0
+extrude_borders: 0
+inner_padding: 0

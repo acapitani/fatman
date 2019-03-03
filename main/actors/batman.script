@@ -1,0 +1,394 @@
+local gamedata = require "main/gamedata"
+local actor = require "main/actors/actor"
+
+--local animation_idle = hash("batman_idle")
+--local animation_walk = hash("batman_walk")
+
+local msg_contact_point_response = hash("contact_point_response")
+local msg_trigger_response = hash("trigger_response")
+local msg_animation_done = hash("animation_done")
+local msg_post_update = hash("post_update")
+local msg_player_direction = hash("player_direction")
+local msg_bomb_explode = hash("bomb_explode")
+local msg_resetpos = hash("resetpos")
+
+local group_gas = hash("gas")
+local group_enemyhit = hash("enemyhit")
+
+local move_up = false
+local move_down = false
+local move_right = false
+local move_left = false
+local action_pressed = false
+
+local input_left = hash("input_left")
+local input_right = hash("input_right")
+local input_down = hash("input_down")
+local input_up = hash("input_up")
+local input_action = hash("input_action")
+local input_a = hash("input_a")
+
+local resetpos = nil
+heropos = nil
+hitpanza = false
+
+local function handle_vpad_touch(self, vpad, key, x, y, bpressed, breleased, dad)
+	local slicex=screen_w/3
+	if (self.key==nil or self.key==key) then		
+		local zeromove=2
+		if (x>0 and (x<slicex) and y>0 and (y<screen_h/3)) or self.key==key then
+			vpad.move=true
+			vpad.tmove=true
+			if bpressed then
+				self.cx=x
+				self.cy=y
+				self.key=key
+			elseif breleased then
+				self.cx=nil
+				self.cy=nil
+				self.key=nil				
+				vpad.tmove=nil
+			elseif self.key then
+				local dx=x-self.cx
+				local dy=y-self.cy				
+				if dx > zeromove then
+					vpad.right=true
+				elseif dx < -zeromove then
+					vpad.left=true
+				end				
+				if dy > zeromove then
+					vpad.up=true
+				elseif dy < -zeromove then
+					vpad.down=true
+				end						
+				local c1=math.abs(dx)
+				local c2=math.abs(dy)
+				if c1>c2 then					
+					vpad.dx=dx*8/c1
+					vpad.dy=dy*8/c1
+				elseif c2>0 then					
+					vpad.dx=dx*8/c2
+					vpad.dy=dy*8/c2
+				else
+					vpad.dx=0
+					vpad.dy=0
+				end
+				--vpad.angle=lume.angle(0,0,dx,dy)
+			end
+		else
+			if breleased then				
+			end
+		end
+	end
+	if (x>screen_w-slicex) and (x < screen_w) and y>0 and (y<screen_h/3) then
+		if bpressed then
+			vpad.punch=true
+		end
+	end	
+end
+
+local function checkvpad(self, action_id, action)
+	local screen_width = tonumber(sys.get_config("display.width"))
+	local screen_height = tonumber(sys.get_config("display.height"))
+	local world_scale_x = screen_w/screen_width
+	local world_scale_y = screen_h/screen_height
+	local vpad={}
+	if action.touch then
+		for i, tpoint in ipairs(action.touch) do
+			local x=tpoint.x*world_scale_x
+			local y=tpoint.y*world_scale_y
+			handle_vpad_touch(self,vpad,i,x,y,tpoint.pressed,tpoint.released,pressed)
+		end	
+	else
+		local x=action.x*world_scale_x
+		local y=action.y*world_scale_y
+		handle_vpad_touch(self,vpad,0,x,y,action.pressed,action.released,pressed)
+	end
+	--msg.post("/level/player", "vpad",{keymove=vpad.move,keyleft=vpad.left,keyright=vpad.right,keyup=vpad.up,keydown=vpad.down,keyA=vpad.punch})
+	--msg.post("gui","vpad",{vpad=vpad.tmove,vpaddx=vpad.dx,vpaddy=vpad.dy,vpadA=vpad.punch})
+	return vpad
+end
+
+local function enable_collision(self, collision)
+	msg.post("#collisionhit1L", "disable")
+	msg.post("#collisionhit2L", "disable")
+	msg.post("#collisionhit3L", "disable")
+	msg.post("#collisionhit1R", "disable")
+	msg.post("#collisionhit2R", "disable")
+	msg.post("#collisionhit3R", "disable")
+	if collision~=nil then
+		local coll = "#collision" .. collision
+		if self.direction==actor.direction_left then
+			coll = coll.."L"
+		else
+			coll = coll.."R"
+		end
+		msg.post(coll, "enable")
+	end
+end
+
+local function knockout(self, bygas)
+	if bygas then
+		msg.post("baloon#baloon", "show_baloon", {position=go.get_position(), gas=true})
+	else
+		msg.post("baloon#baloon", "show_baloon", {position=go.get_position()})
+	end
+	actor.set_state(self, actor.state_out)
+	actor.timer_reset(self)
+end
+
+local function hit(self)
+	actor.set_state(self, actor.state_hit)
+	actor.timer_reset(self)
+	local r = math.random(0, 2)
+	if r==1 then
+		hitpanza = true
+	else
+		hitpanza = false
+	end
+	local h = "hit"..tostring(r+1)
+	actor.play_animation(self, h)
+	enable_collision(self, h)
+end
+
+function init(self)
+	msg.post(".", "acquire_input_focus")
+	actor.init(self, "batman")
+	-- support variable to keep track of collisions and separation
+	self.correction = vmath.vector3()
+	-- if the player stands on ground or not
+	actor.set_direction(self, actor.direction_right)
+	enable_collision(self, nil)
+
+	resetpos = go.get_position()
+end
+
+function final(self)
+	-- Add finalization code here
+	-- Remove this function if not needed
+end
+
+function update(self, dt)
+	if not gamedata.in_game then
+		return
+	end
+
+	local pos = go.get_position()
+	if dt<0.015 or dt>0.050 then
+		dt = 0.033
+	end
+
+	if self.state~=actor.state_hit then
+		enable_collision(self, nil)
+	end
+
+	if action_pressed and (self.state~=actor.state_out and self.state~=actor.state_hit) then
+		hit(self)
+	elseif self.state==actor.state_out then
+		if actor.timer_elapsed(self, 1) then
+			actor.set_state(self, actor.state_idle)
+		end
+	elseif self.state==actor.state_hit then
+		if actor.timer_elapsed(self, 0.5) then
+			actor.set_state(self, actor.state_idle)
+		end
+	else
+		if move_left then
+			actor.set_direction(self, actor.direction_left)
+		elseif move_right then
+			actor.set_direction(self, actor.direction_right)
+		end
+		local move = false
+		if move_left or move_right or move_down or move_up then
+			move = true
+		end
+
+		if move and self.state==actor.state_idle then
+			actor.set_state(self, actor.state_walk)
+		elseif not move and self.state==actor.state_walk then
+			actor.set_state(self, actor.state_idle)
+		end
+
+		if move_right and (pos.x < 300) then
+			pos.x = pos.x + dt*self.speed.x
+		elseif move_left and (pos.x > 24) then
+			pos.x = pos.x - dt*self.speed.x
+		end
+		if move_up and pos.y < 82 then
+			pos.y = pos.y + dt*self.speed.y
+		elseif move_down and pos.y > 38 then
+			pos.y = pos.y - dt*self.speed.y
+		end
+		if pos.x > 328 then
+			pos.x = 0
+		elseif pos.x < -8 then
+			pos.x = 320
+		end
+	end
+
+	pos.z = actor.calc_z(self, pos)
+	go.set_position(pos)
+	--print("z="..pos.z)
+
+	msg.post("#", msg_post_update)
+	--self.correction = vmath.vector3()
+	--self.ground_contact = false
+	actor.update(self, dt)
+	heropos = pos
+	action_pressed = false
+end
+
+local function handle_obstacle_contact(self, normal, distance)
+	-- project the correction vector onto the contact normal
+	-- (the correction vector is the 0-vector for the first contact point)
+	local proj = vmath.dot(self.correction, normal)
+	-- calculate the compensation we need to make for this contact point
+	local comp = (distance - proj) * normal
+	-- add it to the correction vector
+	self.correction = self.correction + comp
+	-- apply the compensation to the player character
+	go.set_position(go.get_position() + comp)
+	-- check if the normal points enough up to consider the player standing on the ground
+	-- (0.7 is roughly equal to 45 degrees deviation from pure vertical direction)
+	if normal.y > 0.7 then
+		self.ground_contact = true
+		self.speed.y = 0
+	end
+	-- project the velocity onto the normal
+	--proj = vmath.dot(self.speed, normal)
+	-- if the projection is negative, it means that some of the velocity points towards the contact point
+	--if proj < 0 then
+	-- remove that component in that case
+	--	self.speed = self.speed - proj * normal
+	--end
+end
+
+local function handle_wall_contact(self, normal, distance)
+	-- project the correction vector onto the contact normal
+	-- (the correction vector is the 0-vector for the first contact point)
+	local proj = vmath.dot(self.correction, normal)
+	-- calculate the compensation we need to make for this contact point
+	local comp = (distance - proj) * normal
+	-- add it to the correction vector
+	self.correction = self.correction + comp
+	-- apply the compensation to the player character
+	go.set_position(go.get_position() + comp)
+	-- check if the normal points enough up to consider the player standing on the ground
+	-- (0.7 is roughly equal to 45 degrees deviation from pure vertical direction)
+	if (normal.x > 0.7 or normal.x < -0.7) and not self.ground_contact then
+		self.wall_contact = true
+		self.speed.x = 0
+	end
+	-- project the velocity onto the normal
+	--proj = vmath.dot(self.speed, normal)
+	-- if the projection is negative, it means that some of the velocity points towards the contact point
+	--if proj < 0 then
+	-- remove that component in that case
+	--	self.speed = self.speed - proj * normal
+	--end
+end
+
+
+function on_message(self, message_id, message, sender)
+	if message_id==msg_animation_done then
+		local b = 0
+	elseif message_id==msg_bomb_explode and self.state~=actor.state_out then
+		if actor.distance_to(self, heropos, message.position)<64 then
+			knockout(self, false)
+		end
+	elseif message_id==msg_contact_point_response and gamedata.in_game then
+		if self.state~=actor.state_out then
+			if message.group==group_gas and math.abs(heropos.y-gaspos.y)<4 then
+				knockout(self, true)
+			elseif message.group==group_enemyhit then
+				knockout(self, false)
+			end	
+		end
+		--if message.group == group_platform then
+		--	handle_obstacle_contact(self, message.normal, message.distance)
+		--elseif message.group == group_wall then
+		--	handle_wall_contact(self, message.normal, message.distance)
+		--end
+	elseif message_id == msg_post_update then
+		self.correction = vmath.vector3()
+		--self.ground_contact = false
+		--self.wall_contact = false
+	--elseif message_id == msg_trigger_response and message.group == group_lift then 
+	--	if message.enter then 
+	--	else
+	--	end
+	elseif message_id==msg_player_direction then
+		actor.set_direction(self, message.direction)
+	elseif message_id==msg_resetpos then
+		actor.set_direction(self, actor.direction_right)
+		enable_collision(self, nil)
+		go.set_position(resetpos)
+		actor.set_state(self, actor.state_idle)
+	end
+end
+
+function on_input(self, action_id, action)
+	if gamedata.in_game then
+		if action_id==input_a then
+			--actor.set_state(self, actor.state_idle)
+			--go.set_position(resetpos)
+			--msg.post("main:/fader#fader", "close")
+		else
+			if action_id==input_action and action.released then
+				action_pressed = true
+			end
+			if MOBILE then
+				action_pressed = false
+				move_left = false
+				move_right = false
+				move_up = false
+				move_down = false
+				if action_id == hash("touch") then
+					--print("touch")	
+					--if self.icallstack == 0  then 
+						local vpad = checkvpad(self,action_id,action)
+						move_left = vpad.left
+						move_right = vpad.right
+						move_up = vpad.up
+						move_down = vpad.down
+						action_pressed = vpad.punch
+					--end
+					--msg.post("gui", "on_input",{action_id=action_id,action=action})			
+				end
+			else
+				if action_id==input_left then
+					if action.released then
+						move_left = false
+					else
+						move_left = true
+					end
+				elseif action_id==input_right then
+					if action.released then
+						move_right = false
+					else
+						move_right = true
+					end
+				end
+
+				if action_id==input_up then
+					if action.released then
+						move_up = false
+					else
+						move_up = true
+					end
+				elseif action_id==input_down then
+					if action.released then
+						move_down = false
+					else
+						move_down= true
+					end
+				end
+			end
+		end
+	end
+end
+
+function on_reload(self)
+	-- Add reload-handling code here
+	-- Remove this function if not needed
+end

@@ -1,0 +1,106 @@
+local actor = require "main/actors/actor"
+local gamedata = require "main/gamedata"
+
+local msg_contact_point_response = hash("contact_point_response")
+local msg_resetpos = hash("resetpos")
+local group_batmanhit = hash("batmanhit")
+
+local resetpos = nil
+
+local function knockout(self)
+	if not hitpanza then
+		msg.post("baloon#baloon", "show_baloon", {position=go.get_position()})
+		actor.set_state(self, actor.state_out)
+		actor.timer_reset(self)	
+		msg.post("controller#home", "updatescore", {score=50})
+	else
+		local pos = go.get_position()
+		if pos.x<heropos.x then
+			go.animate(".", "position.x", go.PLAYBACK_ONCE_FORWARD, pos.x-16, go.EASING_LINEAR, 0.5)
+		else
+			go.animate(".", "position.x", go.PLAYBACK_ONCE_FORWARD, pos.x+16, go.EASING_LINEAR, 0.5)
+		end
+	end
+end
+
+function init(self)
+	actor.init(self, "joker")
+	resetpos = vmath.vector3(go.get_position())
+end
+
+function final(self)
+	-- Add finalization code here
+	-- Remove this function if not needed
+end
+
+function update(self, dt)
+	if not gamedata.in_game or disable_joker then
+		return
+	end
+
+	local pos = go.get_position()
+	if self.state==actor.state_out and actor.timer_elapsed(self, 1.5) then
+		actor.set_state(self, actor.state_idle)
+	end
+	
+	local r = 0.5 + math.random(0, 15)/10
+	if self.state==actor.state_idle and actor.timer_elapsed(self, r) then
+		local batmanpos = go.get_position(go.get_id("batman"))
+		if actor.distance_to(self, pos, batmanpos)>48 then
+			actor.approach(self, batmanpos)
+		else
+			batmanpos.x = batmanpos.x + math.random(-32,32)
+			batmanpos.x = math.max(actor.xmin, math.min(actor.xmax, batmanpos.x))
+			batmanpos.y = batmanpos.y + math.random(-16,16)
+			batmanpos.y = math.max(actor.ymin, math.min(actor.ymax, batmanpos.y))
+			if math.random(0,2)==1 then
+				actor.approach(self, batmanpos)
+			else
+				actor.approach_far(self, batmanpos)
+			end
+		end
+	elseif self.state==actor.state_approach then
+		-- verifico se sono arrivato nel target
+		-- se si vado in stato di idle o attach se sono in prossimita di batman
+		-- altrimenti risetto il target
+		--per il momento rimetto in stato di idle
+		if actor.distance_to(self, pos, self.target)<=8 then
+			actor.idle(self, pos)
+			r = math.random(0, 10)
+			if r<=4 and not bomb_activated and pos.y>52 then
+				local bombpos = vmath.vector3(pos)
+				bombpos.y = bombpos.y - 22
+				msg.post("bomb#bomb", "bomb_released", {position=bombpos})
+			elseif not gas_activated and r>4 then
+				msg.post("gas#gas", "gas_released", {position=pos})
+			end
+		end
+	end
+
+	if self.state==actor.state_approach then
+		pos = actor.approach_to_target(self, pos, dt)
+	end
+
+	pos.z = actor.calc_z(self, pos)
+	go.set_position(pos)
+	actor.update(self, dt)
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id==msg_contact_point_response then
+		if message.group==group_batmanhit and (self.state~=actor.state_out or hitpanza) then
+			local pos = go.get_position()
+			if math.abs(heropos.y-pos.y)<4 then
+				knockout(self)
+			end
+		end
+	elseif message_id==msg_resetpos then
+		actor.set_state(self, actor.state_idle)
+		go.set_position(resetpos)
+	end
+end
+
+function on_reload(self)
+	-- Add reload-handling code here
+	-- Remove this function if not needed
+end

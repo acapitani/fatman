@@ -1,0 +1,42 @@
+local msg_show_baloon = hash("show_baloon")
+local resetpos = nil
+
+local function animation_done(self, url, property)
+	go.set_position(resetpos)
+end
+
+function init(self)
+	resetpos = vmath.vector3(go.get_position())
+end
+
+function final(self)
+	-- Add finalization code here
+	-- Remove this function if not needed
+end
+
+function update(self, dt)
+	-- Add update code here
+	-- Remove this function if not needed
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id==msg_show_baloon then
+		local pos = vmath.vector3(message.position)
+		pos.z = resetpos.z
+		go.set_position(pos)
+		local r = math.random(0, 4)
+		local url = msg.url("#sprite")
+		if r<2 then
+			sprite.play_flipbook(url, "bam", nil)
+		else
+			sprite.play_flipbook(url, "bang", nil)
+		end	
+		go.animate(".", "scale.y", go.PLAYBACK_ONCE_PINGPONG, 0.5, go.EASING_INOUTSINE, 0.5) 
+		go.animate(".", "scale.x", go.PLAYBACK_ONCE_PINGPONG, 0.5, go.EASING_INOUTSINE, 0.5, 0, animation_done) 
+	end
+end
+
+function on_reload(self)
+	-- Add reload-handling code here
+	-- Remove this function if not needed
+end

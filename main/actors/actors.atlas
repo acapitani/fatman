@@ -1,0 +1,288 @@
+images {
+  image: "/main/actors/images/shadow.png"
+}
+images {
+  image: "/main/actors/images/rupe.png"
+}
+animations {
+  id: "batman_idle"
+  images {
+    image: "/main/actors/images/batman-idle1.png"
+  }
+  images {
+    image: "/main/actors/images/batman-idle2.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 2
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "batman_walk"
+  images {
+    image: "/main/actors/images/batman-walk1.png"
+  }
+  images {
+    image: "/main/actors/images/batman-walk2.png"
+  }
+  images {
+    image: "/main/actors/images/batman-walk3.png"
+  }
+  images {
+    image: "/main/actors/images/batman-walk4.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 5
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "robin_danceA"
+  images {
+    image: "/main/actors/images/robin-danceA01.png"
+  }
+  images {
+    image: "/main/actors/images/robin-danceA02.png"
+  }
+  images {
+    image: "/main/actors/images/robin-danceA03.png"
+  }
+  images {
+    image: "/main/actors/images/robin-danceA04.png"
+  }
+  images {
+    image: "/main/actors/images/robin-danceA05.png"
+  }
+  images {
+    image: "/main/actors/images/robin-danceA06.png"
+  }
+  images {
+    image: "/main/actors/images/robin-danceA07.png"
+  }
+  images {
+    image: "/main/actors/images/robin-danceA08.png"
+  }
+  images {
+    image: "/main/actors/images/robin-danceA09.png"
+  }
+  images {
+    image: "/main/actors/images/robin-danceA10.png"
+  }
+  images {
+    image: "/main/actors/images/robin-danceA11.png"
+  }
+  images {
+    image: "/main/actors/images/robin-danceA12.png"
+  }
+  images {
+    image: "/main/actors/images/robin-danceA13.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 4
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "enigma_idle"
+  images {
+    image: "/main/actors/images/enigma-idle1.png"
+  }
+  images {
+    image: "/main/actors/images/enigma-idle2.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 2
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "enigma_walk"
+  images {
+    image: "/main/actors/images/enigma-walk1.png"
+  }
+  images {
+    image: "/main/actors/images/enigma-walk2.png"
+  }
+  images {
+    image: "/main/actors/images/enigma-walk3.png"
+  }
+  images {
+    image: "/main/actors/images/enigma-walk4.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 5
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "joker_idle"
+  images {
+    image: "/main/actors/images/joker-idle1.png"
+  }
+  images {
+    image: "/main/actors/images/joker-idle2.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 2
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "joker_walk"
+  images {
+    image: "/main/actors/images/joker-walk1.png"
+  }
+  images {
+    image: "/main/actors/images/joker-walk2.png"
+  }
+  images {
+    image: "/main/actors/images/joker-walk3.png"
+  }
+  images {
+    image: "/main/actors/images/joker-walk4.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 5
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "batman_out"
+  images {
+    image: "/main/actors/images/batman-out1.png"
+  }
+  images {
+    image: "/main/actors/images/batman-out2.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 2
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "batman_hit1"
+  images {
+    image: "/main/actors/images/batman-hit1.png"
+  }
+  playback: PLAYBACK_ONCE_FORWARD
+  fps: 2
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "batman_hit2"
+  images {
+    image: "/main/actors/images/batman-hit2.png"
+  }
+  playback: PLAYBACK_ONCE_FORWARD
+  fps: 2
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "batman_hit3"
+  images {
+    image: "/main/actors/images/batman-hit3.png"
+  }
+  playback: PLAYBACK_ONCE_FORWARD
+  fps: 2
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "joker_out"
+  images {
+    image: "/main/actors/images/joker-out1.png"
+  }
+  images {
+    image: "/main/actors/images/joker-out2.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 2
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "enigma_out"
+  images {
+    image: "/main/actors/images/enigma-out1.png"
+  }
+  images {
+    image: "/main/actors/images/enigma-out2.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 2
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "enigma_hit"
+  images {
+    image: "/main/actors/images/enigma-hit.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 1
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "robin_bound"
+  images {
+    image: "/main/actors/images/robin-bound1.png"
+  }
+  images {
+    image: "/main/actors/images/robin-bound2.png"
+  }
+  images {
+    image: "/main/actors/images/robin-bound3.png"
+  }
+  images {
+    image: "/main/actors/images/robin-bound4.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 4
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "robin_idle"
+  images {
+    image: "/main/actors/images/robin_idle1.png"
+  }
+  images {
+    image: "/main/actors/images/robin_idle2.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 2
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "robin_danceB"
+  images {
+    image: "/main/actors/images/robin-danceB1.png"
+  }
+  images {
+    image: "/main/actors/images/robin-danceB2.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 2
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "robin_danceC"
+  images {
+    image: "/main/actors/images/robin-danceC1.png"
+  }
+  images {
+    image: "/main/actors/images/robin-danceC2.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 2
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+margin: 0
+extrude_borders: 0
+inner_padding: 0

@@ -1,0 +1,133 @@
+local actor = require "main/actors/actor"
+local gamedata = require "main/gamedata"
+
+local msg_contact_point_response = hash("contact_point_response")
+local msg_resetpos = hash("resetpos")
+local group_batmanhit = hash("batmanhit")
+
+local resetpos = nil
+
+local function enable_collision(self, collision)
+	msg.post("#collisionhit1L", "disable")
+	msg.post("#collisionhit1R", "disable")
+	if collision~=nil then
+		local coll = "#collision" .. collision
+		if self.direction==actor.direction_left then
+			coll = coll.."L"
+		else
+			coll = coll.."R"
+		end
+		msg.post(coll, "enable")
+	end
+end
+
+local function knockout(self)
+	enable_collision(self, nil)
+	if not hitpanza then
+		msg.post("baloon#baloon", "show_baloon", {position=go.get_position()})
+		actor.set_state(self, actor.state_out)
+		actor.timer_reset(self)	
+		msg.post("controller#home", "updatescore", {score=50})
+	else
+		print("hit panza")
+		local pos = go.get_position()
+		if pos.x<heropos.x then
+			go.animate(".", "position.x", go.PLAYBACK_ONCE_FORWARD, pos.x-24, go.EASING_LINEAR, 0.5)
+		else
+			go.animate(".", "position.x", go.PLAYBACK_ONCE_FORWARD, pos.x+24, go.EASING_LINEAR, 0.5)
+		end
+	end
+end
+
+local function hit(self)
+	actor.set_state(self, actor.state_hit)
+	actor.timer_reset(self)
+	actor.play_animation(self, "hit")
+	enable_collision(self, "hit1")
+end
+
+function init(self)
+	actor.init(self, "enigma")
+	enable_collision(self, nil)
+	resetpos = vmath.vector3(go.get_position())
+end
+
+function final(self)
+	-- Add finalization code here
+	-- Remove this function if not needed
+end
+
+function update(self, dt)
+	if not gamedata.in_game or disable_enigma then
+		return
+	end
+
+	local pos = go.get_position()
+	if self.state==actor.state_out and actor.timer_elapsed(self, 1.5) then
+		--actor.set_state(self, actor.state_idle)
+		actor.approach(self, heropos)
+	end
+
+	local r = 0.2+math.random(0, 10)/10
+	if self.state==actor.state_idle and actor.timer_elapsed(self, r) then
+		local batmanpos = go.get_position(go.get_id("batman"))
+		if actor.distance_to(self, pos, batmanpos)>48 then
+			actor.approach(self, batmanpos)
+		else
+			--entra nello stato di attacco
+			print("here")
+			actor.approach_far(self, heropos)
+		end
+	elseif self.state==actor.state_hit and actor.timer_elapsed(self, 0.5) then
+		actor.approach_far(self, heropos)
+		enable_collision(self, nil)
+	elseif self.state==actor.state_approach then
+		-- verifico se sono arrivato nel target
+		-- se si vado in stato di idle o attach se sono in prossimita di batman
+		-- altrimenti risetto il target
+		--per il momento rimetto in stato di idle
+		if actor.distance_to(self, pos, self.target)<=8 then
+			--actor.idle(self, pos)
+			local havehit = false
+			if actor.distance_to(self, pos, heropos)<=32 then
+				if math.abs(pos.y-heropos.y)<=16 and math.random(0,2)==1 then
+					if (self.direction==actor.direction_right and pos.x<heropos.x) or (self.direction==actor.direction_left and pos.x>heropos.x) then
+						hit(self)
+						havehit = true
+					end
+				end
+			end
+			if not havehit then
+				actor.approach(self, heropos)
+			end
+		end
+	end
+
+	if self.state==actor.state_approach then
+		pos = actor.approach_to_target(self, pos, dt)
+	end
+	
+	pos.z = actor.calc_z(self, pos)
+	go.set_position(pos)
+	actor.update(self, dt)
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id==msg_contact_point_response then
+		if (message.group==group_batmanhit) and (self.state~=actor.state_out or hitpanza) then
+			local pos = go.get_position()
+			if math.abs(heropos.y-pos.y)<4 then
+				knockout(self)
+			end
+		end
+	elseif message_id==msg_resetpos then
+		enable_collision(self, nil)
+		actor.set_state(self, actor.state_idle)
+		go.set_position(resetpos)
+	end
+end
+
+function on_reload(self)
+	-- Add reload-handling code here
+	-- Remove this function if not needed
+end

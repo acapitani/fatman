@@ -1,0 +1,49 @@
+local actor = require "main/actors/actor"
+local gamedata = require "main/gamedata"
+
+local msg_contact_point_response = hash("contact_point_response")
+local msg_show = hash("show")
+
+local group_batmanfoot = hash("batmanfoot")
+
+local resetpos = nil
+
+
+function init(self)
+	resetpos = vmath.vector3(go.get_position())
+	actor.init(self, "fatdisco")
+	go.animate(".", "scale.x", go.PLAYBACK_LOOP_PINGPONG, 0.9, go.EASING_LINEAR, 0.5)
+	go.animate(".", "scale.y", go.PLAYBACK_LOOP_PINGPONG, 0.9, go.EASING_LINEAR, 0.5)
+end
+
+function final(self)
+	-- Add finalization code here
+	-- Remove this function if not needed
+end
+
+function update(self, dt)
+	if not gamedata.in_game then
+		return
+	end
+	local pos = go.get_position()
+	pos.z = actor.calc_z_offset(self, pos, 20)
+	go.set_position(pos)
+
+	actor.update(self, dt)
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id==msg_contact_point_response and message.group==group_batmanfoot then
+		msg.post("controller#home", "fatdisco")
+	elseif message_id==msg_show then
+		local x = math.random(actor.xmin+32,actor.xmax-32)
+		local y = math.random(actor.ymin+24,actor.ymax-16)
+		local pos = vmath.vector3(x,y,resetpos.z)
+		go.set_position(pos)
+	end
+end
+
+function on_reload(self)
+	-- Add reload-handling code here
+	-- Remove this function if not needed
+end

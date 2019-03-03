@@ -1,0 +1,116 @@
+local actor = require "main/actors/actor"
+local gamedata = require "main/gamedata"
+local msg_resetpos = hash("resetpos")
+local msg_dancer = hash("dancer")
+
+local resetpos = nil
+local down_speed = 2
+
+robin_isdancing = false
+
+local function moveright_done(self, url, property)
+	actor.set_direction(self, actor.direction_right)
+	go.animate(".", "position.x", go.PLAYBACK_ONCE_FORWARD, resetpos.x-64, go.EASING_LINEAR, 2.0, 0, moveleft_done)
+end
+
+local function moveleft_done(self, url, property)
+	actor.set_direction(self, actor.direction_left)
+	go.animate(".", "position.x", go.PLAYBACK_ONCE_FORWARD, resetpos.x, go.EASING_LINEAR, 2.0, 0, moveright_done)
+end
+
+local function bound(self)
+	go.cancel_animations(".", "position")
+	local pos = vmath.vector3(go.get_position())
+	pos.x = 276
+	pos.y = 150
+	go.set_position(pos)
+	actor.set_state(self, actor.state_bound)
+	msg.post("shadow1#sprite", "disable")
+	msg.post("rupe#sprite", "enable")
+	msg.post("controller#home", "bound")
+	robin_isdancing = false
+end
+
+local function idle(self)
+	msg.post("shadow1#sprite", "enable")
+	msg.post("rupe#sprite", "disable")
+	actor.set_state(self, actor.state_idle)
+	go.set_position(resetpos)
+	robin_isdancing = false
+end
+
+local function dancer(self)
+	go.set_position(resetpos)
+	actor.set_state(self, actor.state_dance)
+	local r = math.random(0,2)
+	if r==1 then
+		actor.play_animation(self, "danceA")
+	else
+		if r==0 then
+			actor.play_animation(self, "danceB")
+		else
+			actor.play_animation(self, "danceC")
+		end
+		actor.set_direction(self, actor.direction_right)
+		go.animate(".", "position.x", go.PLAYBACK_ONCE_FORWARD, resetpos.x-64, go.EASING_LINEAR, 2.0, 0, moveleft_done)
+	end
+	actor.timer_reset(self)
+	msg.post("shadow1#sprite", "enable")
+	msg.post("rupe#sprite", "disable")
+	robin_isdancing = true
+end
+
+function init(self)
+	actor.init(self, "robin")
+	resetpos = vmath.vector3(go.get_position())
+	robin_isdancing = false
+	--bound(self)
+end
+
+function final(self)
+	-- Add finalization code here
+	-- Remove this function if not needed
+end
+
+function update(self, dt)
+	if not gamedata.in_game or disable_robin then
+		return
+	end
+
+	if gamedata.game_state==gamedata.state_ingame and self.state==actor.state_idle then
+		bound(self)
+	else
+		if self.state==actor.state_bound then
+			local pos = go.get_position()
+			--scende in basso piano piano
+			pos.y = pos.y - dt*down_speed
+			if pos.y <= 96 then
+				msg.post("controller#home", "gameover")
+				msg.post("baloon#baloon", "show_baloon", {position=go.get_position(), gas=true})
+			else
+				go.set_position(pos)
+			end
+		elseif self.state==actor.state_dance then
+			if actor.timer_elapsed(self, 8) then
+				bound(self)
+			end
+		end
+	end
+	
+	
+	--pos.z = actor.calc_z(self, pos)
+	actor.update(self, dt)
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id==msg_resetpos then
+		idle(self)
+	elseif message_id==msg_dancer then
+		dancer(self)
+	end
+end
+
+function on_reload(self)
+	-- Add reload-handling code here
+	-- Remove this function if not needed
+end
